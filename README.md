@@ -1,1 +1,1 @@
-This repository contains projects in python such as evil wordle and traversals. In addition it contains a project in R that practices linear regression models. 
+This repository showcases selected Python and R projects from my coursework. It highlights my work in programming, data analysis, and algorithm design. It contains 2 python projects: Evil Wordle and Traversals + 1 RStudio project: Linear Regression Practice
