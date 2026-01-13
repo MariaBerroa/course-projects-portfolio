@@ -1,0 +1,136 @@
+---
+title: "Linear Regression Modeling"
+author: "Maria Berroa"
+date: "2025-04-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, include=FALSE}
+#Import libraries and files
+library(ggplot2)
+library(tidyverse)
+library(mosaic)
+
+creatinine <- read.csv("creatinine.csv")
+disease <- read.csv("covid.csv")
+milk <- read.csv("milk.csv")
+
+```
+
+#### **Problem 1 - Regression Warm-Up**
+##### **A**
+##### For a 55-year old, we should expect a creatinine clearance rate of about 113.72 mL/minute. To determine this, we fit a linear model to our data and obtain the coefficients for the equation. In this case our coefficients are 147.81 and -0.62. The first telling us our baseline and the second one the effect of age. This gives us the equation **y = 147.81 - 0.62x**, where y represents the expected value and x represents age. 
+
+##### **B**
+##### A one-year increase in age is associated with a **-0.62 mL/minute** change in creatinine clearance rate, on average. This means that as you age, the creatinine clearance rate decreases by -0.62 mL/min. I determined this by obtaining the coefficients from my fitted model. The second coefficient represents the rate of change with age - or the slope of the linear model.
+
+##### **C**
+##### To determine who has a higher creatinine clearance rate for her age, we calculate the residuals, which are defined as: actual rate - predicted rate. By doing so, we find that the 40-year old person's creatinine clearance rate (residual) is **11.98 mL/min** above average for her age. In contrast, the 60-year old's creatinine clearance rate (residual) is **1.38 mL/min** above average for her age. Therefore, for her age, the 40-year-old person has a higher creatinine clearance rate. (More detailed equations are on the R file.)
+
+```{r, echo=FALSE, include=FALSE}
+#Visualization
+ggplot(creatinine)+
+  geom_point(aes(x=age, y= creatclear))+
+  geom_smooth(aes(x=age, y=creatclear), method = "lm")
+
+#Fitting
+model_creat = lm(creatclear ~ age, data = creatinine)
+coef(model_creat)
+
+#A
+x= 55
+y = 147.8129158 - 0.6198159*(55)
+
+#C
+# person 1:
+# 40 years, 135 rate
+p1_predicted = 147.8129158 - 0.6198159*40
+#predicted rate: 123.02 # residual: 11.98
+
+#person 2:
+# 60 years, 112 rate
+p2_predicted = 147.8129158 - 0.6198159*60
+#predicted rate: 110.62 # residual: 1.38
+
+```
+
+#### **Problem 2 - Modeling disease growth**
+##### **1.**
+##### After analyzing our data, we estimate that the daily growth rate for COVID-19 cases in Italy is approximately 0.183, and we are 95% confident that the true value lies between 0.159 and 0.209. We also estimate that the doubling time for COVID-19 cases is about 3.8 days, and we are 95% confident that the true value lies between 3.3 and 4.3 days. 
+
+##### **2.**
+##### After analyzing our data, we estimate that the daily growth rate for COVID-19 cases in Spain is approximately 0.276, and we are 95% confident that the true value lies between 0.234 and 0.317. We also estimate that the doubling time for COVID-19 cases is about 2.5 days, and we are 95% confident that the true value lies between 2.2 and 3.0 days. 
+
+
+```{r, echo=FALSE, include=FALSE}
+#Italy
+italy <- disease %>%
+  filter(country == "Italy")
+#Total cases over time
+ggplot(italy) +
+  geom_line(aes(x=days_since_first_death, y=log(deaths)))
+#Let's fit our model
+lm_italy = lm(log(deaths) ~ days_since_first_death, data = italy)
+coef(lm_italy)
+#95% confidence interval
+boot_italy = do(10000)*coef(lm(log(deaths) ~ days_since_first_death, data = mosaic::resample(italy)))
+confint(boot_italy)
+#Doubling Time
+doubling_time_italy <- log(2) / 0.183218
+boot_italy_double = do(10000)*(log(2)/ coef(lm(log(deaths)~days_since_first_death,data=mosaic:: resample(italy))))
+confint(boot_italy_double)
+
+#Spain
+spain <- disease %>%
+  filter(country == "Spain")
+#Total cases over time
+ggplot(spain) + 
+  geom_line(aes(x=days_since_first_death, y=log(deaths)))
+#Let's fit our mode
+lm_spain = lm(log(deaths) ~days_since_first_death, data = spain)
+coef(lm_spain)
+#95% confidence interval
+boot_spain = do(10000)*coef(lm(log(deaths) ~ days_since_first_death, data = mosaic::resample(spain)))
+confint(boot_spain)
+#Doubling Time
+doubling_time_spain <- log(2) / 0.2762447
+boot_spain_double = do(10000)*(log(2)/ coef(lm(log(deaths)~days_since_first_death,data=mosaic:: resample(spain))))
+confint(boot_spain_double)
+
+```
+
+##### **3.**
+```{r, echo=FALSE}
+#Total cases over time: Italy and Spain
+ggplot()+
+  geom_line(data = italy, aes(x=days_since_first_death, y= deaths, color = "Italy")) +
+  geom_line(data = spain, aes(x=days_since_first_death, y=deaths, color = "Spain")) +
+  labs(x= "Days Since First Death", y ="Daily Deaths", title = "Daily COVID-19 deaths in Italy and Spain " ) + theme_classic()
+
+```
+
+#### **Problem 3 - Price Elasticity of Demand**
+##### The estimated price elasticity of demand for milk is -1.62, meaning that when the price of milk increases by 1%, consumers purchase approximately 1.62% less of it. We are 95% confident that the true value lies between -1.77 and -1.45. To estimate the price elasticity, I used a power - law model, which involved taking the logarithm of both variables - price and sales. I then applied bootstrapping to this model in order to obtain the confidence interval 
+
+```{r, echo=FALSE, include=FALSE}
+
+#scatter plot of the data
+ggplot(milk)+
+  geom_point(aes(x= price, y=sales))
+#log-log scale
+ggplot(milk) +
+  geom_point(aes(x=log(price), y=log(sales)))
+#linear model
+lm_milk = lm(log(sales) ~ log(price), data = milk)
+coef(lm_milk)
+confint(lm_milk)
+#95% confidence interval
+boot_milk = do(10000)*lm(log(sales) ~ log(price), data = mosaic::resample(milk))
+confint(boot_milk)
+                                                          
+```
+
